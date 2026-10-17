@@ -4,13 +4,105 @@ import MovieSection from "../components/MovieSection";
 import Footer from "../components/Footer";
 import {
   continueWatching,
-  topRating,
+  topRating as initialTopRating,
   trendingMovies,
   newReleases,
 } from "../data/movies";
 
 export default function Home() {
   const [isMuted, setIsMuted] = useState(true);
+
+  // 1. STATE CRUD (Array of Objects)
+  const [topMovies, setTopMovies] = useState(initialTopRating);
+
+  // State Modal Form Add & Edit
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMovie, setEditingMovie] = useState(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    duration: "2j 00m",
+    ageBadge: "13+",
+    genres: "Aksi, Petualangan",
+    image: "/assets/duty.png",
+  });
+
+  // Handler: Buka Modal Tambah Film Baru (Create)
+  const handleOpenAddModal = () => {
+    setEditingMovie(null);
+    setFormData({
+      title: "",
+      duration: "2j 00m",
+      ageBadge: "13+",
+      genres: "Aksi, Drama",
+      image: "/assets/duty.png",
+    });
+    setIsModalOpen(true);
+  };
+
+  // Handler: Buka Modal Edit Film (Update)
+  const handleOpenEditModal = (movie) => {
+    setEditingMovie(movie);
+    setFormData({
+      title: movie.title || "",
+      duration: movie.duration || "2j 00m",
+      ageBadge: movie.ageBadge || "13+",
+      genres: Array.isArray(movie.genres) ? movie.genres.join(", ") : movie.genres || "",
+      image: movie.image || "/assets/duty.png",
+    });
+    setIsModalOpen(true);
+  };
+
+  // Handler: Hapus Film (Delete)
+  const handleDeleteMovie = (id) => {
+    if (window.confirm("Apakah kamu yakin ingin menghapus film ini dari daftar?")) {
+      setTopMovies((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  // Handler: Simpan Form (Create & Update)
+  const handleSaveMovie = (e) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+
+    const parsedGenres = formData.genres
+      .split(",")
+      .map((g) => g.trim())
+      .filter(Boolean);
+
+    if (editingMovie) {
+      // UPDATE DATA
+      setTopMovies((prev) =>
+        prev.map((item) =>
+          item.id === editingMovie.id
+            ? {
+                ...item,
+                title: formData.title,
+                duration: formData.duration,
+                ageBadge: formData.ageBadge,
+                genres: parsedGenres.length > 0 ? parsedGenres : ["Drama"],
+                image: formData.image || item.image,
+              }
+            : item
+        )
+      );
+    } else {
+      // CREATE / ADD DATA BARU
+      const newMovie = {
+        id: `custom-${Date.now()}`,
+        title: formData.title,
+        duration: formData.duration,
+        ageBadge: formData.ageBadge,
+        genres: parsedGenres.length > 0 ? parsedGenres : ["Aksi"],
+        image: formData.image || "/assets/duty.png",
+        previewImage: formData.image || "/assets/duty-ls.png",
+        badgeType: "blue",
+        badge: "Baru",
+      };
+      setTopMovies((prev) => [newMovie, ...prev]);
+    }
+
+    setIsModalOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#181a1c] text-white flex flex-col relative">
@@ -24,10 +116,7 @@ export default function Home() {
             alt="Duty After School"
             className="w-full h-full object-cover object-top"
           />
-          {/* Fading gradient halus */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#181a1c]/40 via-transparent to-[#181a1c] to-95%" />
-          
-          {/* Lapisan dasar Hero */}
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-[#181a1c]" />
         </div>
 
@@ -95,16 +184,22 @@ export default function Home() {
       </section>
 
       {/* List Film Sections */}
-      <div className="-mt-2 relative z-10">
+      <div className="-mt-2 relative z-10 space-y-6">
         <MovieSection
           title="Melanjutkan Tonton Film"
           movies={continueWatching}
           isLandscape={true}
         />
+
+        {/* SECTION INTERAKTIF DENGAN FITUR LENGKAP CRUD */}
         <MovieSection
           title="Top Rating Film dan Series Hari ini"
-          movies={topRating}
+          movies={topMovies}
+          onEdit={handleOpenEditModal}
+          onDelete={handleDeleteMovie}
+          onAddClick={handleOpenAddModal}
         />
+
         <MovieSection
           title="Film Trending"
           movies={trendingMovies}
@@ -116,6 +211,173 @@ export default function Home() {
       </div>
 
       <Footer />
+
+      {/* MODAL FORM CREATE & UPDATE ENHANCED */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#181A1C] border border-[#282A2E] rounded-[24px] p-6 md:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-16 -right-16 w-44 h-44 bg-[#0F1E93]/20 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header Modal */}
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#282A2E]">
+              <div>
+                <span
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border ${editingMovie
+                  ? "text-amber-300 bg-amber-500/15 border-amber-500/30"
+                  : "text-blue-400 bg-blue-500/15 border-blue-500/30"
+                }`}
+                  >
+                  <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                  editingMovie ? "bg-amber-400" : "bg-blue-400"
+                  }`}
+                  />
+                  {editingMovie ? "Mode Ubah" : "Film Baru"}
+                </span>
+                <h3 className="text-xl md:text-2xl font-bold text-white mt-2">
+                  {editingMovie ? "Edit Informasi Film" : "Tambah ke Daftar Film"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-9 h-9 rounded-full bg-[#22282A] border border-[#3A3D42] text-gray-400 hover:text-white hover:border-gray-300 flex items-center justify-center transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Live Card Preview Mini */}
+            <div className="flex items-center gap-4 p-3 mb-5 bg-[#22282A]/70 border border-[#282A2E] rounded-xl">
+              <img
+                src={formData.image || "/assets/duty.png"}
+                alt="Preview"
+                className="w-14 h-20 object-cover rounded-lg shadow-md shrink-0 bg-[#181A1C]"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-gray-400 uppercase font-medium">Live Preview</p>
+                <h4 className="text-sm md:text-base font-bold text-white truncate">
+                  {formData.title.trim() || "Judul Film Anda"}
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="bg-[#2B2F33] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {formData.ageBadge}
+                  </span>
+                  <span className="text-xs text-[#C1C2C4]">{formData.duration}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <form onSubmit={handleSaveMovie} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#C1C2C4] mb-1.5">
+                  Judul Film <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  placeholder="Masukkan judul film..."
+                  className="w-full bg-[#22282A] border border-[#3A3D42] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0F1E93] focus:ring-1 focus:ring-[#0F1E93] transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#C1C2C4] mb-1.5">
+                    Durasi / Episode
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.duration}
+                    onChange={(e) =>
+                      setFormData({ ...formData, duration: e.target.value })
+                    }
+                    placeholder="Contoh: 2j 15m"
+                    className="w-full bg-[#22282A] border border-[#3A3D42] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#0F1E93] transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#C1C2C4] mb-1.5">
+                    Rating Usia
+                  </label>
+                  <select
+                    value={formData.ageBadge}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ageBadge: e.target.value })
+                    }
+                    className="w-full bg-[#22282A] border border-[#3A3D42] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#0F1E93] transition"
+                  >
+                    <option value="SU">SU (Semua Umur)</option>
+                    <option value="13+">13+</option>
+                    <option value="16+">16+</option>
+                    <option value="18+">18+</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#C1C2C4] mb-1.5">
+                  Genre (pisahkan koma)
+                </label>
+                <input
+                  type="text"
+                  value={formData.genres}
+                  onChange={(e) =>
+                    setFormData({ ...formData, genres: e.target.value })
+                  }
+                  placeholder="Aksi, Fantasi, Petualangan"
+                  className="w-full bg-[#22282A] border border-[#3A3D42] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#0F1E93] transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#C1C2C4] mb-1.5">
+                  Pilih Poster
+                </label>
+                <select
+                  value={formData.image}
+                  onChange={(e) =>
+                    setFormData({ ...formData, image: e.target.value })
+                  }
+                  className="w-full bg-[#22282A] border border-[#3A3D42] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#0F1E93] transition"
+                >
+                  <option value="/assets/duty.png">Duty After School</option>
+                  <option value="/assets/suzume.png">Suzume</option>
+                  <option value="/assets/jurassic.png">Jurassic World</option>
+                  <option value="/assets/sonic.png">Sonic 2</option>
+                  <option value="/assets/big-hero.png">Big Hero 6</option>
+                  <option value="/assets/missing.png">Missing</option>
+                  <option value="/assets/tomorrow-war.png">The Tomorrow War</option>
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2.5 bg-[#2B2F33] hover:bg-[#383C41] text-gray-300 rounded-full text-xs font-semibold transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#0F1E93] hover:bg-[#0B1773] text-white rounded-full text-xs font-semibold transition shadow-lg shadow-[#0F1E93]/40 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {editingMovie ? "Simpan Perubahan" : "Tambahkan Film"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

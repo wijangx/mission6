@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 
-export default function MovieCard({ movie, isLandscape = false }) {
+export default function MovieCard({
+  movie,
+  isLandscape = false,
+  onEdit,
+  onDelete,
+}) {
   const [isRendered, setIsRendered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -15,7 +20,7 @@ export default function MovieCard({ movie, isLandscape = false }) {
     ? rawGenres
     : typeof rawGenres === "string"
       ? rawGenres.split(",").map((g) => g.trim())
-      : ["Aksi", "Petualangan", "Sains"];
+      : ["Aksi", "Petualangan"];
 
   const hasProgress = typeof movie.progress === "number";
 
@@ -29,16 +34,12 @@ export default function MovieCard({ movie, isLandscape = false }) {
       if (cardRef.current) {
         const rect = cardRef.current.getBoundingClientRect();
         const popupWidth = 390;
-        const paddingBoundary = 80; // Batas jarak dari pinggir layar (sejajar anak panah)
+        const paddingBoundary = 80;
 
-        // 1. SUMBU Y: MURNI TITIK TENGAH POSTER
-        // Menghapus logika minTop agar popup tidak pernah melompat/bergeser ke bawah
         const calculatedTop = rect.top + rect.height / 2;
-
-        // 2. SUMBU X: MURNI TITIK TENGAH POSTER (dengan proteksi batas layar kanan-kiri)
         const cardCenterX = rect.left + rect.width / 2;
         const popupHalfWidth = popupWidth / 2;
-        
+
         const minLeftAllowed = paddingBoundary + popupHalfWidth;
         const maxLeftAllowed = window.innerWidth - paddingBoundary - popupHalfWidth;
 
@@ -148,7 +149,7 @@ export default function MovieCard({ movie, isLandscape = false }) {
               borderRadius: "20px",
             }}
             className={`hidden md:flex fixed -translate-x-1/2 -translate-y-1/2 w-[390px] ${
-              isLandscape ? "h-[445px]" : "h-[450px]"
+              isLandscape ? "h-[455px]" : "h-[465px]"
             } bg-[#181A1C] rounded-[20px] overflow-hidden shadow-[0_24px_50px_rgba(0,0,0,0.95)] border border-[#282A2E] flex-col justify-between pointer-events-none transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] z-[40] ${
               isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
@@ -175,17 +176,38 @@ export default function MovieCard({ movie, isLandscape = false }) {
 
             <div className="px-6 pb-6 pt-2 flex flex-col justify-between flex-grow">
               <div className="flex items-center justify-between pointer-events-auto">
-                <div className="flex items-center gap-3">
-                  <button type="button" className="w-[46px] h-[46px] rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-200 transition shadow">
+                <div className="flex items-center gap-2">
+                  <button type="button" className="w-[42px] h-[42px] rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-200 transition shadow">
                     <svg className="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                   </button>
-                  <button type="button" className="w-[46px] h-[46px] rounded-full border border-[#787A7C] bg-[#22282A]/60 hover:border-white text-white flex items-center justify-center transition">
+                  <button type="button" className="w-[42px] h-[42px] rounded-full border border-[#787A7C] bg-[#22282A]/60 hover:border-white text-white flex items-center justify-center transition">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   </button>
                 </div>
-                <button type="button" className="w-[46px] h-[46px] rounded-full border border-[#787A7C] bg-[#22282A]/60 hover:border-white text-white flex items-center justify-center transition">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                </button>
+
+                {/* Tombol CRUD: Update & Delete */}
+                <div className="flex items-center gap-2">
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(movie)}
+                      className="px-3 py-1.5 bg-[#2B2F33] hover:bg-[#3F4347] border border-[#52575D] text-white rounded-full text-xs font-semibold transition"
+                      title="Edit Film"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(movie.id)}
+                      className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-500/40 text-red-300 rounded-full text-xs font-semibold transition"
+                      title="Hapus Film"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                </div>
               </div>
 
               {hasProgress && isLandscape ? (
@@ -211,7 +233,7 @@ export default function MovieCard({ movie, isLandscape = false }) {
 
               <div className="w-full flex items-center justify-between text-[15px] text-[#C1C2C4] font-medium pt-1">
                 {genresList.map((genre, idx) => (
-                  <Fragment key={genre}>
+                  <Fragment key={`${genre}-${idx}`}>
                     <span className="hover:text-white transition cursor-default pointer-events-auto">{genre}</span>
                     {idx < genresList.length - 1 && <span className="w-1.5 h-1.5 rounded-full bg-[#787A7C] shrink-0" />}
                   </Fragment>
